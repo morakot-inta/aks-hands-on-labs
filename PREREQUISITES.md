@@ -66,25 +66,99 @@ time, and three hours has no slack in it.
 
 # Part B · The platform team, before the day
 
-| # | What | Why it matters |
-|---|---|---|
-| 1 | An AKS cluster for training | Everything runs on it |
-| 2 | **API server reachable from attendee laptops** | Highest-risk item — see Decision 2 |
-| 3 | One namespace per attendee | So nobody can break anyone else's work |
-| 4 | Each attendee granted **AKS Cluster User Role** + edit in their namespace | Lab 0 |
-| 5 | **ACR attached to the cluster** (`az aks update --attach-acr`) | Every lab; removes the need for an imagePullSecret |
-| 6 | The sample image `orders-api:v1` present in that ACR | Labs 1–4 |
-| 7 | **Key Vault** with a secret named `db-password`, and the **Secrets Store CSI driver** add-on enabled | Lab 2 |
-| 7b | Key Vault access for the managed identity (**Key Vault Secrets User**) | Lab 2 |
-| 8 | **Workload Identity + OIDC issuer** enabled, and a managed identity with **one federated credential per attendee namespace** | Lab 3. A single managed identity can hold **at most 20 federated credentials**, so more than 20 attendees needs a second identity. They must be created **sequentially** — concurrent creation under one identity returns 409 — and **well in advance**, because a token requested minutes after creation fails with `AADSTS70021` while it propagates |
-| 8b | A **storage account** with a container `lab-data`, one file `hello.txt` in it, and **Storage Blob Data Contributor** granted to the managed identity on that container | Lab 3 reads and writes real files. Contributor, not Reader — the lab uploads as well as downloads |
-| 9 | **Istio add-on `asm-1-26`+ AND Managed Gateway API enabled**, with one shared internal Gateway | Lab 4. Gateway API does not work without both |
-| 10 | **Azure Policy add-on, baseline in DENY mode** | Lab 1 is built on the manifest actually being rejected. In audit mode the lab has no lesson in it |
-| 11 | *(resolved — `curl` ships inside the sample image, so Lab 4 verifies from the attendee's own pod)* | Lab 4 |
-| 12 | A printed card per attendee: namespace, resource group, cluster, ACR, client ID, key vault, tenant ID, **storage account** | Every lab refers to these placeholders |
+Most of this is scripted in [`provision/`](../aks-labs/provision/). Build the cluster, then
+run `0-enable-cluster.sh` and `1-shared.sh`. What follows is what those scripts assume, and
+what to check if you build by hand.
 
-**Verify items 5, 9 and 10 by actually running Labs 1–4 end to end before the day.** Each of
-them fails in a way that only shows up when you try.
+## B1 · The cluster itself
+
+Four flags matter. Getting them wrong means rebuilding, so check before creating.
+
+| Flag | Why |
+|---|---|
+| `--enable-oidc-issuer --enable-workload-identity` | Lab 3 does not exist without these |
+| `--network-plugin azure --network-plugin-mode overlay` | The labs teach that pod addresses do not consume VNet space. On a non-overlay cluster that statement is false |
+| `--enable-aad --enable-azure-rbac` | **Easy to miss.** Without Entra integration, a RoleBinding against an Entra object ID authorises nobody, so attendees cannot be confined to their own namespace |
+| **Public API server** (do *not* pass `--enable-private-cluster`) | Attendees connect from laptops. Restrict with `--api-server-authorized-ip-ranges` instead — see Decision 2 |
+
+Check an existing cluster:
+
+```bash
+az aks show -g $RG -n $CLUSTER --query '{oidc:oidcIssuerProfile.enabled,
+  workloadIdentity:securityProfile.workloadIdentity.enabled,
+  overlay:networkProfile.networkPluginMode, entra:aadProfile.managed,
+  private:apiServerAccessProfile.enablePrivateCluster}'
+```
+
+## B2 · Features to enable on it
+
+| # | What | Command | For |
+|---|---|---|---|
+| 1 | Istio add-on, revision **`asm-1-26` or later** | `az aks mesh enable -g $RG -n $CLUSTER` | Lab 4 |
+| 2 | **Managed Gateway API** | `az aks update -g $RG -n $CLUSTER --enable-gateway-api` | Lab 4. **Needs `azure-cli` 2.86.0+** — `az upgrade`, or `brew upgrade azure-cli` on a Homebrew install |
+| 3 | Azure Policy add-on | `az aks enable-addons -g $RG -n $CLUSTER --addons azure-policy` | Lab 1 |
+| 4 | Secrets Store CSI driver | `az aks enable-addons -g $RG -n $CLUSTER --addons azure-keyvault-secrets-provider` | Lab 2 |
+| 5 | ACR attached | `az aks update -g $RG -n $CLUSTER --attach-acr $ACR` | Every lab — this is what removes the `imagePullSecret` |
+
+Items 2 and 3 are what `0-enable-cluster.sh` does.
+
+Verify 1 and 2 landed:
+
+```bash
+kubectl get gatewayclass          # expect "istio" with ACCEPTED=True
+```
+
+## B3 · The four policies Lab 1 depends on
+
+The add-on alone enforces nothing. Assign these as **`deny`**, scoped to the resource group:
+
+| Policy | Catches |
+|---|---|
+| `Kubernetes cluster containers should only use allowed images` | an image that is not from your ACR |
+| `Kubernetes cluster containers CPU and memory resource limits should not exceed the specified limits` | missing or excessive limits |
+| `Kubernetes cluster pods and containers should only run with approved user and group IDs` | running as root |
+| `Ensure cluster containers have readiness or liveness probes configured` | missing probes |
+
+`0-enable-cluster.sh` assigns all four with the right parameters.
+
+> **Gatekeeper syncs on a schedule — allow 15 to 20 minutes** before the rules reject
+> anything. Verifying immediately gives a false failure.
+
+## B4 · Supporting resources
+
+| # | What | For |
+|---|---|---|
+| 1 | **ACR** with `orders-api:v1` — `az acr build --registry $ACR --image orders-api:v1 sample-app/` | Every lab |
+| 2 | **Key Vault** with a secret `db-password`, RBAC authorisation on | Lab 2 |
+| 3 | **Storage account**, container `lab-data`, one file `hello.txt` | Lab 3 |
+| 4 | One shared **Gateway**, internal, in `gateway-system` | Lab 4 |
+
+All four are `1-shared.sh`.
+
+## B5 · Per attendee
+
+| # | What | Note |
+|---|---|---|
+| 1 | A namespace | |
+| 2 | A **federated credential** on a managed identity, subject `system:serviceaccount:<ns>:orders-api` | One identity holds **at most 20**, so more than 20 attendees needs a second. Create them **sequentially** — concurrently under one identity returns 409 — and **at least an hour ahead**, or a token request fails with `AADSTS70021` while it propagates |
+| 3 | **Azure Kubernetes Service Cluster User Role** on the cluster | Without it `az aks get-credentials` fails and Lab 0 stops dead |
+| 4 | A **RoleBinding** to `edit` in their namespace only | Requires B1's `--enable-aad --enable-azure-rbac` |
+| 5 | A printed **card**: namespace, resource group, cluster, ACR, client ID, key vault, tenant ID, storage account | Every lab refers to these placeholders |
+
+Items 1 to 4 are `2-attendees.sh`; item 5 is `3-cards.sh`.
+
+The managed identity needs **Storage Blob Data Contributor** on the container (Contributor,
+not Reader — Lab 3 uploads as well as downloads) and **Key Vault Secrets User** on the vault.
+
+## B6 · Prove it, do not assume it
+
+```bash
+./4-verify.sh
+```
+
+It applies the deliberately broken Lab 1 manifest. **If that manifest is accepted, the
+policies are not in force and Lab 1 has no lesson left in it** — which is invisible to any
+check that only lists resources.
 
 ---
 
@@ -93,7 +167,7 @@ them fails in a way that only shows up when you try.
 ### Decision 1 · How attendees get the lab files
 
 The repository is private. Options: invite each attendee as a collaborator (they need GitHub
-accounts), move it to your own organisation and grant the team, or hand out a ZIP on the
+accounts), move it to a Kaopanwa organisation and grant the team, or hand out a ZIP on the
 day and skip GitHub entirely for the labs.
 
 ### Decision 2 · How laptops reach the API server
