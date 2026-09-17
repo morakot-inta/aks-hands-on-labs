@@ -77,15 +77,14 @@ for row in "${ROWS[@]}"; do
      --role "Azure Kubernetes Service Cluster User Role" --scope "$AKS_ID" -o none 2>/dev/null \
      && note "granted AKS Cluster User Role" || note "already had AKS Cluster User Role"
 
-  # ...and to edit things, but only inside their own namespace
-  OID=$(az ad user show --id "$UPN" --query id -o tsv 2>/dev/null || echo "")
-  if [ -n "$OID" ]; then
-    kubectl create rolebinding "${NS}-edit" --clusterrole=edit --user="$OID" -n "$NS" \
-      --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-    note "rolebinding in $NS only"
-  else
-    note "!! could not resolve $UPN in Entra — rolebinding skipped"
-  fi
+  # ...and to edit things, but only inside their own namespace.
+  # Azure RBAC for Kubernetes: the namespace is an Azure scope, so no Entra
+  # object id lookup and no in-cluster RoleBinding is needed. Requires the
+  # cluster to have been created with --enable-aad --enable-azure-rbac.
+  az role assignment create --assignee "$UPN" \
+     --role "Azure Kubernetes Service RBAC Writer" \
+     --scope "${AKS_ID}/namespaces/${NS}" -o none 2>/dev/null \
+     && note "granted RBAC Writer on $NS only" || note "already had RBAC Writer on $NS"
 
   i=$((i+1))
 done

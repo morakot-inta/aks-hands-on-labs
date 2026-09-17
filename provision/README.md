@@ -2,7 +2,14 @@
 
 Run by **the platform team**, in their own subscription, before the session.
 
-Five scripts. Run them in order, then run `4-verify.sh` again the morning of the session.
+Two ways to do this — the commands are identical, pick whichever suits your change process.
+
+**Copy and paste:** [`RUNBOOK.md`](RUNBOOK.md) is the whole build as `az` commands for
+[Azure Cloud Shell](https://shell.azure.com). Nothing to download, and Cloud Shell's `az` is
+always current, so the 2.86.0 requirement takes care of itself.
+
+**Scripted:** the numbered scripts below. Run them in order, then run `4-verify.sh` again on
+the morning of the session.
 
 ```bash
 vi config.sh                          # subscription id, and names of RG, cluster, ACR...
@@ -65,8 +72,10 @@ az acr build --registry <ACR> --image orders-api:v1 ../sample-app   # TypeScript
 
 ## Prerequisites for whoever runs this
 
-- **`azure-cli` 2.86.0 or newer** — `--enable-gateway-api` needs it. Run `az upgrade`
+- **`azure-cli` 2.86.0 or newer** — `--enable-gateway-api` needs it. Run `az upgrade`, or
+  `brew upgrade azure-cli` on a Homebrew install. Cloud Shell is already current
+- Permission to read users from Entra is **no longer needed** — attendee access is granted
+  with Azure RBAC scoped to the namespace, not an in-cluster RoleBinding
 - `az` signed in with rights to create identities and role assignments in the resource group
 - `kubectl` already pointed at the cluster (`az aks get-credentials`)
 - **bash 4+** — `mapfile` is used. macOS ships bash 3.2; run with `/opt/homebrew/bin/bash`
-- Permission to read users from Entra (`az ad user show`), for the per-namespace RoleBinding
