@@ -66,7 +66,7 @@ time, and three hours has no slack in it.
 
 # Part B · The platform team, before the day
 
-Every command for this is in [`provision/RUNBOOK.md`](../aks-labs/provision/RUNBOOK.md),
+Every command for this is in [`provision/`](../aks-labs/provision/),
 written to be pasted into Azure Cloud Shell in order. What follows is what that runbook does
 and why each part matters.
 
