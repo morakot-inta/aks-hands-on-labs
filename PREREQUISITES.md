@@ -66,9 +66,9 @@ time, and three hours has no slack in it.
 
 # Part B · The platform team, before the day
 
-Most of this is scripted in [`provision/`](../aks-labs/provision/). Build the cluster, then
-run `0-enable-cluster.sh` and `1-shared.sh`. What follows is what those scripts assume, and
-what to check if you build by hand.
+Every command for this is in [`provision/RUNBOOK.md`](../aks-labs/provision/RUNBOOK.md),
+written to be pasted into Azure Cloud Shell in order. What follows is what that runbook does
+and why each part matters.
 
 ## B1 · The cluster itself
 
@@ -107,7 +107,7 @@ az aks show -g $RG -n $CLUSTER --query '{oidc:oidcIssuerProfile.enabled,
 | 4 | Secrets Store CSI driver | `az aks enable-addons -g $RG -n $CLUSTER --addons azure-keyvault-secrets-provider` | Lab 2 |
 | 5 | ACR attached | `az aks update -g $RG -n $CLUSTER --attach-acr $ACR` | Every lab — this is what removes the `imagePullSecret` |
 
-Items 2 and 3 are what `0-enable-cluster.sh` does.
+Runbook steps 2 and 3.
 
 Verify 1 and 2 landed:
 
@@ -126,7 +126,7 @@ The add-on alone enforces nothing. Assign these as **`deny`**, scoped to the res
 | `Kubernetes cluster pods and containers should only run with approved user and group IDs` | running as root |
 | `Ensure cluster containers have readiness or liveness probes configured` | missing probes |
 
-`0-enable-cluster.sh` assigns all four with the right parameters.
+Runbook step 3 assigns all four with the right parameters.
 
 > **Gatekeeper syncs on a schedule — allow 15 to 20 minutes** before the rules reject
 > anything. Verifying immediately gives a false failure.
@@ -140,7 +140,7 @@ The add-on alone enforces nothing. Assign these as **`deny`**, scoped to the res
 | 3 | **Storage account**, container `lab-data`, one file `hello.txt` | Lab 3 |
 | 4 | One shared **Gateway**, internal, in `gateway-system` | Lab 4 |
 
-All four are `1-shared.sh`.
+Runbook steps 4, 5 and 7.
 
 ## B5 · Per attendee
 
@@ -152,18 +152,14 @@ All four are `1-shared.sh`.
 | 4 | A **RoleBinding** to `edit` in their namespace only | Requires B1's `--enable-aad --enable-azure-rbac` |
 | 5 | A printed **card**: namespace, resource group, cluster, ACR, client ID, key vault, tenant ID, storage account | Every lab refers to these placeholders |
 
-Items 1 to 4 are `2-attendees.sh`; item 5 is `3-cards.sh`.
+Items 1 to 4 are runbook step 8; item 5 is step 10.
 
 The managed identity needs **Storage Blob Data Contributor** on the container (Contributor,
 not Reader — Lab 3 uploads as well as downloads) and **Key Vault Secrets User** on the vault.
 
 ## B6 · Prove it, do not assume it
 
-```bash
-./4-verify.sh
-```
-
-It applies the deliberately broken Lab 1 manifest. **If that manifest is accepted, the
+Runbook step 9 applies the deliberately broken Lab 1 manifest. **If that manifest is accepted, the
 policies are not in force and Lab 1 has no lesson left in it** — which is invisible to any
 check that only lists resources.
 

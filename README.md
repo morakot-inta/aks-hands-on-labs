@@ -54,7 +54,7 @@ than practised.
 The application you deploy is in [`sample-app/`](sample-app/) — one readable file, if you
 want to see what the endpoints actually do.
 
-Trainers and platform engineers: [`provision/`](provision/) builds the whole environment.
+Platform engineers: [`provision/RUNBOOK.md`](provision/RUNBOOK.md) builds the whole environment — copy and paste into Azure Cloud Shell.
 
 ---
 

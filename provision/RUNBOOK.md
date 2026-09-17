@@ -6,8 +6,12 @@ For the platform team. Every block below is meant to be pasted into
 Cloud Shell is the easiest place to run this: `az` and `kubectl` are already there and
 always current, so the `azure-cli 2.86.0` requirement in Step 2 takes care of itself.
 
-> There is a scripted version of all of this in the same folder — `0-enable-cluster.sh`
-> onwards. Use whichever suits your change process. The commands are identical.
+Two steps need files from this repository — building the image in Step 4, and the
+deliberately broken manifest in Step 9. Clone it first and stay in the root:
+
+```bash
+git clone <this repository> && cd <repository>
+```
 
 ---
 
