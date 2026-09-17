@@ -1,0 +1,5 @@
+# One attendee per line:  <namespace>,<their Entra sign-in>
+# The namespace is what they type all afternoon — keep it short and lowercase.
+#
+# alice,alice@example.com
+# bob,bob@example.com

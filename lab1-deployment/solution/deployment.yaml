@@ -1,0 +1,38 @@
+# Lab 1 — solution. Four things were missing or wrong.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orders-api
+  template:
+    metadata:
+      labels:
+        app: orders-api
+    spec:
+      securityContext:                      # FIX 2 — was running as root
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+      - name: orders-api
+        image: <ACR>.azurecr.io/orders-api:v1   # FIX 1 — was nginx:latest
+        ports:
+        - containerPort: 8080
+        resources:                          # FIX 3 — were missing entirely
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:                      # FIX 4 — were missing entirely
+          httpGet:
+            path: /healthz
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080

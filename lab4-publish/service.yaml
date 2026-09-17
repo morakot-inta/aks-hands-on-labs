@@ -1,0 +1,12 @@
+# Lab 4 — ClusterIP, not LoadBalancer. A public LoadBalancer is refused by policy.
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-api
+spec:
+  type: ClusterIP
+  selector:
+    app: orders-api
+  ports:
+  - port: 8080
+    targetPort: 8080

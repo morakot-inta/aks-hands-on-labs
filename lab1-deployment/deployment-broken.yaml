@@ -1,0 +1,21 @@
+# Lab 1 — this manifest is deliberately wrong in FOUR places.
+# Apply it, read the rejection, fix one thing, apply again. Repeat.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orders-api
+  template:
+    metadata:
+      labels:
+        app: orders-api
+    spec:
+      containers:
+      - name: orders-api
+        image: nginx:latest
+        ports:
+        - containerPort: 8080

@@ -1,0 +1,18 @@
+# Lab 3 — solution. THREE changes, and the first two are in different places.
+# Setting only the ServiceAccount annotation is the mistake almost everyone makes.
+spec:
+  template:
+    metadata:
+      labels:
+        app: orders-api
+        azure.workload.identity/use: "true"     # <-- B: ON THE POD TEMPLATE
+    spec:
+      serviceAccountName: orders-api            # <-- A: the annotated ServiceAccount
+      containers:
+      - name: orders-api
+        env:                                    # <-- C: which account to talk to
+        - name: STORAGE_ACCOUNT
+          value: "<STORAGE-ACCOUNT>"
+        - name: NAMESPACE
+          value: "<NAMESPACE>"
+        # ... the rest is unchanged from Lab 2 ...

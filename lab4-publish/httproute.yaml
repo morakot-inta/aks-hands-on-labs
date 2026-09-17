@@ -1,0 +1,16 @@
+# Lab 4 — you change TWO lines: the hostname, and nothing else if your Service
+# is called orders-api. Do NOT create a Gateway — one already exists and is shared.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: orders-api
+spec:
+  parentRefs:
+  - name: shared-gateway
+    namespace: gateway-system
+  hostnames:
+  - "<NAMESPACE>.lab.example.com"        # <-- CHANGE THIS
+  rules:
+  - backendRefs:
+    - name: orders-api
+      port: 8080

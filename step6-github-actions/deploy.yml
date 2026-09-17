@@ -1,0 +1,34 @@
+# Demonstrated, not practised. Copy this into .github/workflows/ in your own repository.
+#
+# There is NO secret in this file. The workflow proves its identity to Azure the same way
+# your pod did in Lab 3 — a federated credential and a short-lived token.
+name: Deploy to AKS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write          # lets the workflow request an Azure token
+  contents: read
+
+jobs:
+  deploy:
+    # A GitHub-hosted runner cannot reach a private API server.
+    # For the real cluster this becomes: runs-on: [self-hosted, labs-aks]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id:       ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get cluster credentials
+        run: az aks get-credentials -g ${{ vars.RESOURCE_GROUP }} -n ${{ vars.CLUSTER }}
+
+      - name: Deploy
+        run: kubectl apply -f k8s/ -n ${{ vars.NAMESPACE }}

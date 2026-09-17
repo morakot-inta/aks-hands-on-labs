@@ -1,0 +1,16 @@
+# Lab 2 — solution: the two blocks added to your Lab 1 Deployment.
+# (only the parts that changed are shown here)
+    spec:
+      volumes:                              # ADD 1
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: orders-api-spc
+      containers:
+      - name: orders-api
+        volumeMounts:                       # ADD 2
+        - name: secrets
+          mountPath: /mnt/secrets-store
+          readOnly: true
