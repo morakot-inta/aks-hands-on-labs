@@ -79,7 +79,14 @@ Four flags matter. Getting them wrong means rebuilding, so check before creating
 | `--enable-oidc-issuer --enable-workload-identity` | Lab 3 does not exist without these |
 | `--network-plugin azure --network-plugin-mode overlay` | The labs teach that pod addresses do not consume VNet space. On a non-overlay cluster that statement is false |
 | `--enable-aad --enable-azure-rbac` | **Easy to miss.** Without Entra integration, a RoleBinding against an Entra object ID authorises nobody, so attendees cannot be confined to their own namespace |
-| **Public API server** (do *not* pass `--enable-private-cluster`) | Attendees connect from laptops. Restrict with `--api-server-authorized-ip-ranges` instead — see Decision 2 |
+| **Public API server** — `privateCluster: false`, restricted with `--api-server-authorized-ip-ranges` | Attendees connect from their own laptops. **A private cluster cannot be used for this session.** This is a deliberate, documented difference from the production design, which requires a private API server — the deck names the exception out loud so attendees do not build the wrong mental model |
+
+Restrict it rather than leaving it open to the internet — one command, no downside:
+
+```bash
+az aks update -g $RG -n $CLUSTER \
+  --api-server-authorized-ip-ranges "<office egress IP>/32"
+```
 
 Check an existing cluster:
 
