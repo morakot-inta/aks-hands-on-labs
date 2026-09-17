@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # Edit this file, then run the numbered scripts in order.
+# The subscription every script targets. Set this — do not rely on whichever
+# subscription happens to be active, because the wrong one is a production one.
+export SUBSCRIPTION="00000000-0000-0000-0000-000000000000"
+
 export RG="rg-aks-labs"
 export LOCATION="southeastasia"
 export CLUSTER="aks-labs"

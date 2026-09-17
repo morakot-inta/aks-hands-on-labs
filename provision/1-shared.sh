@@ -4,6 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"; source ./config.sh
 
+# Target the subscription named in config.sh, never whichever one is active.
+az account set --subscription "$SUBSCRIPTION" >/dev/null
+printf 'subscription: %s\n' "$(az account show --query name -o tsv)"
+
 say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 
 say "Checking the cluster has what the labs need"
@@ -25,7 +29,15 @@ az storage blob upload --account-name "$STORAGE" -c "$CONTAINER" -n hello.txt \
   -f /tmp/hello.txt --auth-mode login --overwrite -o none
 echo "  uploaded hello.txt"
 
-say "Key Vault secret for Lab 2"
+say "Key Vault, and the secret Lab 2 mounts"
+az keyvault show -n "$KEYVAULT" -g "$RG" -o none 2>/dev/null \
+  || az keyvault create -n "$KEYVAULT" -g "$RG" -l "$LOCATION" \
+       --enable-rbac-authorization true --retention-days 7 -o none
+# with RBAC authorisation the creator still needs a data-plane role to write secrets
+ME=$(az ad signed-in-user show --query id -o tsv)
+az role assignment create --assignee-object-id "$ME" --assignee-principal-type User \
+   --role "Key Vault Secrets Officer" \
+   --scope "$(az keyvault show -n "$KEYVAULT" -g "$RG" --query id -o tsv)" -o none 2>/dev/null || true
 az keyvault secret set --vault-name "$KEYVAULT" -n db-password \
   --value "this-is-not-a-real-password" -o none
 echo "  set db-password"

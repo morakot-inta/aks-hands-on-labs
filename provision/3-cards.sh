@@ -4,6 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"; source ./config.sh
 
+# Target the subscription named in config.sh, never whichever one is active.
+az account set --subscription "$SUBSCRIPTION" >/dev/null
+printf 'subscription: %s\n' "$(az account show --query name -o tsv)"
+
 TENANT=$(az account show --query tenantId -o tsv)
 mkdir -p cards; rm -f cards/*.md
 

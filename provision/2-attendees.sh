@@ -8,6 +8,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"; source ./config.sh
 
+# Target the subscription named in config.sh, never whichever one is active.
+az account set --subscription "$SUBSCRIPTION" >/dev/null
+printf 'subscription: %s\n' "$(az account show --query name -o tsv)"
+
 say()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
 

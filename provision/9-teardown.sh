@@ -3,6 +3,10 @@
 set -uo pipefail
 cd "$(dirname "$0")"; source ./config.sh
 
+# Target the subscription named in config.sh, never whichever one is active.
+az account set --subscription "$SUBSCRIPTION" >/dev/null
+printf 'subscription: %s\n' "$(az account show --query name -o tsv)"
+
 mapfile -t ROWS < <(grep -v '^[[:space:]]*#' attendees.txt | grep -v '^[[:space:]]*$')
 echo "This will delete:"
 echo "  - ${#ROWS[@]} namespaces and their contents"

@@ -3,6 +3,10 @@
 #     Deploys the full Lab 1-4 solution into a throwaway namespace and checks each step.
 set -uo pipefail
 cd "$(dirname "$0")"; source ./config.sh
+
+# Target the subscription named in config.sh, never whichever one is active.
+az account set --subscription "$SUBSCRIPTION" >/dev/null
+printf 'subscription: %s\n' "$(az account show --query name -o tsv)"
 NS="${VERIFY_NS:-provision-check}"
 FAIL=0
 ok()   { printf '  \033[32mPASS\033[0m  %s\n' "$*"; }
